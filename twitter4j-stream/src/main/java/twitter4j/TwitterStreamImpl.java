@@ -302,9 +302,34 @@ class TwitterStreamImpl extends TwitterBaseImpl implements TwitterStream {
      */
     StatusStream getFilterStream(FilterQuery query) throws TwitterException {
         ensureAuthorizationEnabled();
+        
+        // Check if language is the only filter
+        HttpParameter[] params = query.asHttpParameterArray(stallWarningsParam);
+        boolean hasLangFilter = false;
+        String filterEndpoint = "statuses/filter.json";
+        String langs = "";
+        
+        if(params.length == 3) {
+        	for(HttpParameter param : params) {
+            	System.out.println("param: " + param.getName() + param.getValue());
+            	if(param.getName().equals("language")) {
+            		hasLangFilter = true;
+            		langs = param.getValue();
+            		break;
+            	}
+            }
+        }
+        
+        // If there is (only) a language filter, change the endpoint to sample.json
+        if(hasLangFilter) {
+        	filterEndpoint = "statuses/sample.json";
+        	System.out.println("endpoint = " + filterEndpoint);
+        	System.out.println("URL: " + conf.getStreamBaseURL() + filterEndpoint);
+        }
+        
         try {
             return new StatusStreamImpl(getDispatcher(), http.post(conf.getStreamBaseURL()
-                    + "statuses/filter.json"
+                    + filterEndpoint
                     , query.asHttpParameterArray(stallWarningsParam), auth, null), conf);
         } catch (IOException e) {
             throw new TwitterException(e);
